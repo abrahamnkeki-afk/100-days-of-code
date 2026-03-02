@@ -1,0 +1,6 @@
+# Password Validator
+password = input("Enter password: ")
+if password == "Python123":
+    print("Access granted")
+else:
+    print("Wrong password")

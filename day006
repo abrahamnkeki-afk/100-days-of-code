@@ -1,0 +1,59 @@
+def calculate_ndvi(nir, red):
+    if nir + red == 0:
+        return None
+    return (nir - red) / (nir + red)
+
+
+def classify_ndvi(ndvi, location="Unknown Location"):
+    if ndvi >= 0.6:
+        condition = "HEALTHY"
+    elif ndvi >= 0.4:
+        condition = "MODERATE"
+    elif ndvi >= 0.2:
+        condition = "DEGRADED"
+    else:
+        condition = "CRITICAL"
+    return f"{location}: {condition} (NDVI {ndvi:.3f})"
+
+
+def scan_location(name, nir, red, prev_ndvi=None):
+    if nir + red == 0:
+        return None
+
+    ndvi = (nir - red) / (nir + red)
+
+    if ndvi >= 0.6:
+        condition = "HEALTHY"
+        alert = False
+    elif ndvi >= 0.4:
+        condition = "MODERATE"
+        alert = False
+    elif ndvi >= 0.2:
+        condition = "DEGRADED"
+        alert = True
+    else:
+        condition = "CRITICAL"
+        alert = True
+
+    change_pct = None
+    if prev_ndvi is not None and prev_ndvi != 0:
+        change_pct = ((ndvi - prev_ndvi) / abs(prev_ndvi)) * 100
+
+    return {
+        "name": name,
+        "ndvi": round(ndvi, 4),
+        "condition": condition,
+        "change_pct": round(change_pct, 2) if change_pct else None,
+        "alert": alert
+    }
+
+
+locations = [
+    ("Dalwa Farm Zone", 0.31, 0.25, 0.51),
+    ("Gwoza Hills", 0.52, 0.18, 0.65),
+    ("Zamfara Belt", 0.28, 0.22, 0.44),
+]
+
+for name, nir, red, prev in locations:
+    result = scan_location(name, nir, red, prev)
+    print(f"{result['name']}: {result['condition']} | NDVI {result['ndvi']} | Change: {result['change_pct']}%")

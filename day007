@@ -1,0 +1,84 @@
+import json
+import os
+from datetime import date
+
+SCAN_FILE = "scan_results.json"
+
+
+def calculate_ndvi(nir, red):
+    if nir + red == 0:
+        return None
+    return (nir - red) / (nir + red)
+
+
+def classify_ndvi(ndvi):
+    if ndvi >= 0.6:
+        return "HEALTHY", False
+    elif ndvi >= 0.4:
+        return "MODERATE", False
+    elif ndvi >= 0.2:
+        return "DEGRADED", True
+    else:
+        return "CRITICAL", True
+
+
+def scan_location(name, nir, red, prev_ndvi=None):
+    if nir + red == 0:
+        return None
+
+    ndvi = (nir - red) / (nir + red)
+    condition, alert = classify_ndvi(ndvi)
+
+    change_pct = None
+    if prev_ndvi is not None and prev_ndvi != 0:
+        change_pct = ((ndvi - prev_ndvi) / abs(prev_ndvi)) * 100
+
+    return {
+        "name": name,
+        "ndvi": round(ndvi, 4),
+        "condition": condition,
+        "change_pct": round(change_pct, 2) if change_pct else None,
+        "alert": alert,
+        "date": str(date.today())
+    }
+
+
+def load_scans():
+    if not os.path.exists(SCAN_FILE):
+        return []
+    with open(SCAN_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_scan(scan):
+    scans = load_scans()
+    scans.append(scan)
+    with open(SCAN_FILE, "w", encoding="utf-8") as f:
+        json.dump(scans, f, indent=4)
+
+
+def print_report(scan):
+    print(f"\n{'='*40}")
+    print(f"LOCATION:  {scan['name']}")
+    print(f"DATE:      {scan['date']}")
+    print(f"NDVI:      {scan['ndvi']}")
+    print(f"CONDITION: {scan['condition']}")
+    if scan['change_pct']:
+        print(f"CHANGE:    {scan['change_pct']}%")
+    if scan['alert']:
+        print(f"*** ALERT: Vegetation loss detected ***")
+    print(f"{'='*40}\n")
+
+
+locations = [
+    ("Dalwa Farm Zone", 0.31, 0.25, 0.51),
+    ("Gwoza Hills", 0.52, 0.18, 0.65),
+    ("Zamfara Belt", 0.28, 0.22, 0.44),
+]
+
+for name, nir, red, prev in locations:
+    result = scan_location(name, nir, red, prev)
+    save_scan(result)
+    print_report(result)
+
+print(f"All scans saved to {SCAN_FILE}")

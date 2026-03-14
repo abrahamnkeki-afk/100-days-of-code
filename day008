@@ -1,0 +1,67 @@
+import json
+import os
+
+SCAN_FILE = "scan_results.json"
+
+def load_scans():
+    if not os.path.exists(SCAN_FILE):
+        return []
+    try:
+        with open(SCAN_FILE, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        print("Scan file corrupted. Starting fresh.")
+        return []
+
+def save_scans(scans):
+    try:
+        with open(SCAN_FILE, "w") as f:
+            json.dump(scans, f, indent=2)
+    except IOError as e:
+        print(f"Could not save scans: {e}")
+
+def calculate_ndvi(nir, red):
+    if not isinstance(nir, (int, float)) or not isinstance(red, (int, float)):
+        raise TypeError("NIR and Red must be numbers.")
+    if nir + red == 0:
+        raise ValueError("NIR and Red cannot both be zero.")
+    return (nir - red) / (nir + red)
+
+def classify_ndvi(ndvi):
+    if ndvi < 0.1:
+        return "CRITICAL"
+    elif ndvi < 0.3:
+        return "WARNING"
+    else:
+        return "HEALTHY"
+
+def scan_location(name, nir, red):
+    try:
+        ndvi = calculate_ndvi(nir, red)
+        status = classify_ndvi(ndvi)
+        return {"location": name, "ndvi": round(ndvi, 4), "status": status}
+    except (ValueError, TypeError) as e:
+        print(f"Skipped {name}: {e}")
+        return None
+
+def main():
+    scans = load_scans()
+
+    locations = [
+        ("Dalwa", 0.12, 0.44),
+        ("Zamfara", 0.09, 0.51),
+        ("Maiduguri", 0.31, 0.22),
+        ("BadInput", "NIR", 0),
+    ]
+
+    for name, nir, red in locations:
+        result = scan_location(name, nir, red)
+        if result:
+            scans.append(result)
+            flag = " *** ALERT ***" if result["status"] == "CRITICAL" else ""
+            print(f"{result['location']}: NDVI={result['ndvi']} | {result['status']}{flag}")
+
+    save_scans(scans)
+    print(f"\n{len(scans)} scan(s) saved to {SCAN_FILE}")
+
+main()

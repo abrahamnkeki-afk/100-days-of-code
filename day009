@@ -1,0 +1,97 @@
+import json
+import os
+
+GRADES_FILE = "grades.json"
+
+def load_grades():
+    try:
+        with open(GRADES_FILE, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError:
+        print("Warning: grades file is corrupted. Starting fresh.")
+        return {}
+
+def save_grades(grades):
+    try:
+        with open(GRADES_FILE, "w") as f:
+            json.dump(grades, f, indent=2)
+        print("Saved.")
+    except OSError as e:
+        print(f"Could not save: {e}")
+    finally:
+        print("Save attempt complete.")
+
+def add_student(grades):
+    try:
+        name = input("Student name: ").strip()
+        if not name:
+            print("Name cannot be empty.")
+            return
+        grade = float(input(f"Grade for {name} (0-100): "))
+        if not 0 <= grade <= 100:
+            print("Grade must be between 0 and 100.")
+            return
+        grades[name] = grade
+        save_grades(grades)
+    except ValueError:
+        print("Grade must be a number.")
+
+def view_grades(grades):
+    if not grades:
+        print("No students yet.")
+        return
+    print("\nStudent Grades")
+    print("-" * 25)
+    for name, grade in sorted(grades.items()):
+        if grade >= 70:
+            status = "PASS"
+        else:
+            status = "FAIL"
+        print(f"{name}: {grade} | {status}")
+    print("-" * 25)
+    average = sum(grades.values()) / len(grades)
+    print(f"Class average: {average:.1f}\n")
+
+def delete_student(grades):
+    try:
+        name = input("Student name to delete: ").strip()
+        if name not in grades:
+            print(f"{name} not found.")
+            return
+        del grades[name]
+        save_grades(grades)
+        print(f"{name} removed.")
+    except KeyError:
+        print("Student not found.")
+
+def main():
+    grades = load_grades()
+    print("Grade Tracker")
+
+    while True:
+        try:
+            print("\n1. Add student")
+            print("2. View grades")
+            print("3. Delete student")
+            print("4. Quit")
+            choice = input("Choose: ").strip()
+
+            if choice == "1":
+                add_student(grades)
+            elif choice == "2":
+                view_grades(grades)
+            elif choice == "3":
+                delete_student(grades)
+            elif choice == "4":
+                print("Goodbye.")
+                break
+            else:
+                print("Invalid choice. Enter 1, 2, 3, or 4.")
+
+        except KeyboardInterrupt:
+            print("\nExiting.")
+            break
+
+main()
